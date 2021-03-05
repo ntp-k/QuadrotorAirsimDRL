@@ -103,7 +103,7 @@ class AirSimDroneEnv(AirSimEnv):
 
         if self.state["collision"]:
             reward = -100
-        else:
+        else: #calculate distance between 2 points by Euclidean
             dist = 10000000
             for i in range(0, len(pts) - 1):
                 dist = min(
