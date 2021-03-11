@@ -1,4 +1,3 @@
-import setup_path
 import airsim
 import numpy as np
 import math
@@ -11,6 +10,8 @@ from airgym.envs.airsim_env import AirSimEnv
 
 
 class AirSimDroneEnv(AirSimEnv):
+
+
     def __init__(self, ip_address, step_length, image_shape):
         super().__init__(image_shape)
         self.step_length = step_length
@@ -39,8 +40,7 @@ class AirSimDroneEnv(AirSimEnv):
         self.drone.armDisarm(True)
 
         # Set home position and velocity
-        self.drone.moveToPositionAsync(-0.55265, -31.9786, -19.0225, 10).join()
-        self.drone.moveByVelocityAsync(1, -0.67, -0.8, 5).join()
+        self.drone.moveToPositionAsync(0, 0, -10, 10).join()
 
     def transform_obs(self, responses):
         img1d = np.array(responses[0].image_data_float, dtype=np.float)
@@ -77,19 +77,55 @@ class AirSimDroneEnv(AirSimEnv):
             quad_vel.z_val + quad_offset[2],
             5,
         ).join()
+    
 
     def _compute_reward(self):
         thresh_dist = 7
         beta = 1
+        reward = 0
+        reward_dist = 0
+        reward_speed = 0
 
         z = -10
-        pts = [
-            np.array([-0.55265, -31.9786, -19.0225]),
-            np.array([48.59735, -63.3286, -60.07256]),
-            np.array([193.5974, -55.0786, -46.32256]),
-            np.array([369.2474, 35.32137, -62.5725]),
-            np.array([541.3474, 143.6714, -32.07256]),
-        ]
+        distination = np.array([70,-5,-20])
+
+        quad_pt = np.array(list((self.state["position"].x_val, self.state["position"].y_val,self.state["position"].z_val,)))
+        prev_quad_pt = np.array(list((self.state["prev_position"].x_val, self.state["prev_position"].y_val,self.state["prev_position"].z_val,)))
+
+        if self.state["collision"]:
+            reward = -100
+        else:
+            distance = np.linalg.norm(distination - quad_pt)
+            prev_distance = np.linalg.norm(distination - prev_quad_pt) 
+
+        if distance > prev_distance:
+            reward = -2
+        else:
+            reward_dist = 10/distance
+            reward_speed = np.linalg.norm([self.state["velocity"].x_val, self.state["velocity"].y_val, self.state["velocity"].z_val,])
+            reward = reward_dist + reward_speed
+
+        done = 0
+        if reward <= -100:
+            done = 1
+
+        print("reward ", format(reward, ".3f") , " reward_dist " , format(reward_dist, ".3f"), " reward_speed ", format(reward_speed, ".3f"))
+
+        return reward, done
+
+    """
+    def _compute_reward(self):
+        # thresh_dist = 7
+        # beta = 1
+
+        # z = -10
+        # pts = [
+        #     np.array([-0.55265, -31.9786, -19.0225]),
+        #     np.array([48.59735, -63.3286, -60.07256]),
+        #     np.array([193.5974, -55.0786, -46.32256]),
+        #     np.array([369.2474, 35.32137, -62.5725]),
+        #     np.array([541.3474, 143.6714, -32.07256]),
+        # ]
 
         quad_pt = np.array(
             list(
@@ -133,6 +169,7 @@ class AirSimDroneEnv(AirSimEnv):
             done = 1
 
         return reward, done
+    """
 
     def step(self, action):
         self._do_action(action)
@@ -146,19 +183,20 @@ class AirSimDroneEnv(AirSimEnv):
         return self._get_obs()
 
     def interpret_action(self, action):
-        if action == 0:
+        #NED coordinate system (X,Y,Z) : +X is North, +Y is East and +Z is Down
+        if action == 0: # North
             quad_offset = (self.step_length, 0, 0)
-        elif action == 1:
+        elif action == 1: # East
             quad_offset = (0, self.step_length, 0)
-        elif action == 2:
+        elif action == 2: # Down
             quad_offset = (0, 0, self.step_length)
-        elif action == 3:
+        elif action == 3: # South
             quad_offset = (-self.step_length, 0, 0)
-        elif action == 4:
+        elif action == 4: # West
             quad_offset = (0, -self.step_length, 0)
-        elif action == 5:
+        elif action == 5: # Up
             quad_offset = (0, 0, -self.step_length)
-        else:
+        else: # Origin
             quad_offset = (0, 0, 0)
 
         return quad_offset
