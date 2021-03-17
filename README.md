@@ -2,7 +2,7 @@ Note : This repository is my graduation project
 Status : Under development
 
 # QuadrotorAirsimDRL
- Self-flying quadrotor using Airsim with Deep Reinforcement Learning (DQN)
+ Self-flying quadrotor based on Deep Reinforcement Learning (DQN) using Airsim with OpenAI Gym
 
 ## Requirements
  - Airsim
