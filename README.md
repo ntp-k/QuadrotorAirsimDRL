@@ -1,4 +1,5 @@
-Note : This repository is my graduation project. (for study purposes only)
+Note : This repository is my graduation project
+Status : Under development
 
 # QuadrotorAirsimDRL
  Self-flying quadrotor using Airsim with Deep Reinforcement Learning (DQN)
