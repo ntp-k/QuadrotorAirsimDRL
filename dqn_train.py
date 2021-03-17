@@ -1,7 +1,3 @@
-import numpy as np
-import math
-import time
-
 import gym
 from gym import spaces
 from airsim.AirSimClient import *
@@ -13,6 +9,10 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import EvalCallback
+
+import numpy as np
+import math
+import time
 
 # connect to the AirSim simulator
 client = MultirotorClient()
