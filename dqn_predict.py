@@ -1,6 +1,7 @@
 import gym
 from gym import spaces
-from airsim.AirSimClient import *
+
+from airsim
 from airgym.envs.airsim_env import AirSimEnv
 from airgym.envs.drone_env import AirSimDroneEnv
 
@@ -9,7 +10,7 @@ from stable_baselines3 import DQN
 import numpy as np
 
 # connect to the AirSim simulator
-client = MultirotorClient()
+client = airsim.MultirotorClient()
 client.confirmConnection()
 client.enableApiControl(True)
 client.armDisarm(True)
@@ -22,6 +23,7 @@ env = DummyVecEnv(
                 ip_address="127.0.0.1",
                 step_length=1,
                 image_shape=(84, 84, 1),
+                destination=np.array([70,-5,-20]),
             )
         )
     ]

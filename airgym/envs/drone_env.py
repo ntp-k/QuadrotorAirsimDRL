@@ -1,21 +1,23 @@
+import gym
+from gym import spaces
+
 import airsim
+from airgym.envs.airsim_env import AirSimEnv
+
 import numpy as np
 import math
 import time
 from argparse import ArgumentParser
 
-import gym
-from gym import spaces
-from airgym.envs.airsim_env import AirSimEnv
-
 
 class AirSimDroneEnv(AirSimEnv):
 
 
-    def __init__(self, ip_address, step_length, image_shape):
+    def __init__(self, ip_address, step_length, image_shape, destination):
         super().__init__(image_shape)
         self.step_length = step_length
         self.image_shape = image_shape
+        self.destination = destination
 
         self.state = {
             "position": np.zeros(3),
@@ -85,9 +87,7 @@ class AirSimDroneEnv(AirSimEnv):
         reward = 0
         reward_dist = 0
         reward_speed = 0
-
         z = -10
-        distination = np.array([70,-5,-20])
 
         quad_pt = np.array(list((self.state["position"].x_val, self.state["position"].y_val,self.state["position"].z_val,)))
         prev_quad_pt = np.array(list((self.state["prev_position"].x_val, self.state["prev_position"].y_val,self.state["prev_position"].z_val,)))
@@ -95,8 +95,8 @@ class AirSimDroneEnv(AirSimEnv):
         if self.state["collision"]:
             reward = -100
         else:
-            distance = np.linalg.norm(distination - quad_pt)
-            prev_distance = np.linalg.norm(distination - prev_quad_pt) 
+            distance = np.linalg.norm(self.destination - quad_pt)
+            prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
 
         if distance > prev_distance:
             reward = -2
