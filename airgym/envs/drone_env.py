@@ -82,15 +82,17 @@ class AirSimDroneEnv(AirSimEnv):
     
 
     def _compute_reward(self):
-        thresh_dist = 7
-        beta = 1
         reward = 0
         reward_dist = 0
         reward_speed = 0
-        z = -10
 
-        quad_pt = np.array(list((self.state["position"].x_val, self.state["position"].y_val,self.state["position"].z_val,)))
-        prev_quad_pt = np.array(list((self.state["prev_position"].x_val, self.state["prev_position"].y_val,self.state["prev_position"].z_val,)))
+        quad_pt = np.array(list((self.state["position"].x_val,
+                                 self.state["position"].y_val,
+                                 self.state["position"].z_val,)))
+
+        prev_quad_pt = np.array(list((self.state["prev_position"].x_val,
+                                      self.state["prev_position"].y_val,
+                                      self.state["prev_position"].z_val,)))
 
         if self.state["collision"]:
             reward = -100
@@ -102,7 +104,9 @@ class AirSimDroneEnv(AirSimEnv):
             reward = -2
         else:
             reward_dist = 10/distance
-            reward_speed = np.linalg.norm([self.state["velocity"].x_val, self.state["velocity"].y_val, self.state["velocity"].z_val,])
+            reward_speed = np.linalg.norm([self.state["velocity"].x_val,
+                                           self.state["velocity"].y_val,
+                                           self.state["velocity"].z_val,])
             reward = reward_dist + reward_speed
 
         done = 0
