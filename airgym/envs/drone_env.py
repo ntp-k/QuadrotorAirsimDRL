@@ -18,6 +18,7 @@ class AirSimDroneEnv(AirSimEnv):
         self.step_length = step_length
         self.image_shape = image_shape
         self.destination = destination
+        self.total_rewards = float(0.0)
 
         self.state = {
             "position": np.zeros(3),
@@ -94,86 +95,42 @@ class AirSimDroneEnv(AirSimEnv):
                                       self.state["prev_position"].y_val,
                                       self.state["prev_position"].z_val,)))
 
+        distance = 0.0
+        done = 0
+
         if self.state["collision"]:
             reward = -100
+            done = 1
         else:
             distance = np.linalg.norm(self.destination - quad_pt)
             prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
 
-        if distance > prev_distance:
-            reward = -2
-        else:
-            reward_dist = 10/distance
-            reward_speed = np.linalg.norm([self.state["velocity"].x_val,
-                                           self.state["velocity"].y_val,
-                                           self.state["velocity"].z_val,])
-            reward = reward_dist + reward_speed
-
-        done = 0
-        if reward <= -100:
-            done = 1
-
-        print("reward ", format(reward, ".3f") , " reward_dist " , format(reward_dist, ".3f"), " reward_speed ", format(reward_speed, ".3f"))
-
-        return reward, done
-
-    """
-    def _compute_reward(self):
-        # thresh_dist = 7
-        # beta = 1
-
-        # z = -10
-        # pts = [
-        #     np.array([-0.55265, -31.9786, -19.0225]),
-        #     np.array([48.59735, -63.3286, -60.07256]),
-        #     np.array([193.5974, -55.0786, -46.32256]),
-        #     np.array([369.2474, 35.32137, -62.5725]),
-        #     np.array([541.3474, 143.6714, -32.07256]),
-        # ]
-
-        quad_pt = np.array(
-            list(
-                (
-                    self.state["position"].x_val,
-                    self.state["position"].y_val,
-                    self.state["position"].z_val,
-                )
-            )
-        )
-
-        if self.state["collision"]:
-            reward = -100
-        else: #calculate distance between 2 points by Euclidean
-            dist = 10000000
-            for i in range(0, len(pts) - 1):
-                dist = min(
-                    dist,
-                    np.linalg.norm(np.cross((quad_pt - pts[i]), (quad_pt - pts[i + 1])))
-                    / np.linalg.norm(pts[i] - pts[i + 1]),
-                )
-
-            if dist > thresh_dist:
-                reward = -10
+            if distance > prev_distance:
+                reward = -2
             else:
-                reward_dist = math.exp(-beta * dist) - 0.5
-                reward_speed = (
-                    np.linalg.norm(
-                        [
-                            self.state["velocity"].x_val,
-                            self.state["velocity"].y_val,
-                            self.state["velocity"].z_val,
-                        ]
-                    )
-                    - 0.5
-                )
-                reward = reward_dist + reward_speed
+                if distance == 0:
+                    reward_dist = 100
+                    done = 1
+                else:
+                    reward_dist = 10/distance
 
-        done = 0
-        if reward <= -10:
+                reward_speed = np.linalg.norm([self.state["velocity"].x_val,
+                                            self.state["velocity"].y_val,
+                                            self.state["velocity"].z_val,])
+                reward = reward_dist + reward_speed
+    
+
+        self.total_rewards += reward
+        if self.total_rewards < -150:
             done = 1
+        
+        if done == 1:
+            self.total_rewards = 0
+
+        print("reward ", format(reward, ".3f") , "\t[  " , format(reward_dist, ".3f"), ", ", format(reward_speed, ".3f"), " ]\ttotal ", format(self.total_rewards, ".3f"), "\tdistance ", format(distance, ".2f") )
 
         return reward, done
-    """
+
 
     def step(self, action):
         self._do_action(action)

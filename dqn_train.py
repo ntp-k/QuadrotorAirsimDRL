@@ -11,15 +11,28 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import EvalCallback
 
+# from stable_baselines3 import results_plotter
+# from stable_baselines3.results_plotter import load_results, ts2xy
+
+from stable_baselines3.common.monitor import Monitor
+
+import matplotlib.pyplot as plt
+from tensorboard import program
 import numpy as np
 import math
 import time
+import os
 
 # connect to the AirSim simulator
 client = MultirotorClient()
 client.confirmConnection()
 client.enableApiControl(True)
 client.armDisarm(True)
+
+#configuration
+destination = np.array([70,-5,-20])
+time_steps = 1e5
+log_path = 'train_logs'
 
 env = DummyVecEnv(
     [
@@ -29,7 +42,7 @@ env = DummyVecEnv(
                 ip_address="127.0.0.1",
                 step_length=1,
                 image_shape=(84, 84, 1),
-                destination=np.array([70,-5,-20]),
+                destination=destination,
             )
         )
     ]
@@ -37,6 +50,8 @@ env = DummyVecEnv(
 
 # Wrap env as VecTransposeImage to allow SB to handle frame observations
 env = VecTransposeImage(env)
+
+# env = Monitor(env, log_path)
 
 # Initialize RL algorithm type and parameters
 model = DQN(
@@ -62,7 +77,7 @@ eval_callback = EvalCallback(
     callback_on_new_best=None,
     n_eval_episodes=5,
     best_model_save_path=".",
-    log_path=".",
+    log_path="log_path",
     eval_freq=10000,
 )
 callbacks.append(eval_callback)
@@ -72,10 +87,17 @@ kwargs["callback"] = callbacks
 
 # Train for a certain number of timesteps
 model.learn(
-    total_timesteps=5e5,
+    total_timesteps=int(time_steps),
     tb_log_name="dqn_airsim_drone_run_" + str(time.time()),
     **kwargs
 )
+
+tb = program.TensorBoard()
+tb.configure(argv=[None, '--logdir', './tb_logs/'])
+tb.launch()
+
+# results_plotter.plot_results([log_path], time_steps, results_plotter.X_TIMESTEPS, "DQN_train")
+# plt.show()
 
 # Save policy weights
 model.save("dqn_airsim_drone_policy")
