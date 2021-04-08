@@ -9,7 +9,7 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 
 # from stable_baselines3 import results_plotter
 # from stable_baselines3.results_plotter import load_results, ts2xy
@@ -31,8 +31,8 @@ client.armDisarm(True)
 
 #configuration
 destination = np.array([70,-5,-20])
-time_steps = 1e5
-log_path = 'train_logs'
+time_steps = 5
+log_path = './tb_logs/'
 
 env = DummyVecEnv(
     [
@@ -67,7 +67,7 @@ model = DQN(
     max_grad_norm=10,
     exploration_fraction=0.1,
     exploration_final_eps=0.01,
-    tensorboard_log="./tb_logs/",
+    tensorboard_log=log_path,
 )
 
 # Create an evaluation callback with the same env, called every 10000 iterations
@@ -77,27 +77,60 @@ eval_callback = EvalCallback(
     callback_on_new_best=None,
     n_eval_episodes=5,
     best_model_save_path=".",
-    log_path="log_path",
+    log_path=".",
     eval_freq=10000,
 )
+
+
+class TensorboardCallback(BaseCallback):
+    def __init__(self, verbose=1):
+        super(TensorboardCallback, self).__init__(verbose)
+        self.cum_rew = 0
+
+    def _on_rollout_end(self) -> None:
+        self.logger.record("rollout/cum_rew", self.cum_rew)
+
+        # reset vars once recorded
+        self.cum_rew = 0
+    
+    def _on_step(self) -> bool:
+        # log reward
+        self.cum_rew += (self.training_env.get_attr("rewards")[0])[-1]
+        return True
+
+reward_callback = EveryNTimesteps(
+    n_steps=1,
+    callbacks = TensorboardCallback()
+)
+
 callbacks.append(eval_callback)
+callbacks.append(reward_callback)
 
 kwargs = {}
 kwargs["callback"] = callbacks
 
+
+
 # Train for a certain number of timesteps
+# model.learn(
+#     total_timesteps=int(time_steps),
+#     tb_log_name="dqn_" + str(time_steps) + "_time_steps",
+#     **kwargs
+# )
+
 model.learn(
     total_timesteps=int(time_steps),
-    tb_log_name="dqn_airsim_drone_run_" + str(time.time()),
-    **kwargs
+    tb_log_name="test_" + str(time_steps) + "_time_steps"
 )
 
-tb = program.TensorBoard()
-tb.configure(argv=[None, '--logdir', './tb_logs/'])
-tb.launch()
+
+
+# tb = program.TensorBoard()
+# tb.configure(argv=[None, '--logdir', './tb_logs/'])
+# tb.launch()
 
 # results_plotter.plot_results([log_path], time_steps, results_plotter.X_TIMESTEPS, "DQN_train")
 # plt.show()
 
 # Save policy weights
-model.save("dqn_airsim_drone_policy")
+model.save("model/dqn_airsim_drone_policy")

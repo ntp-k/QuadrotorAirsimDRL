@@ -18,6 +18,7 @@ class AirSimDroneEnv(AirSimEnv):
         self.step_length = step_length
         self.image_shape = image_shape
         self.destination = destination
+        self.rewards = float(0.0)
         self.total_rewards = float(0.0)
 
         self.state = {
@@ -83,7 +84,7 @@ class AirSimDroneEnv(AirSimEnv):
     
 
     def _compute_reward(self):
-        reward = 0
+        self.rewards = 0
         reward_dist = 0
         reward_speed = 0
 
@@ -99,14 +100,14 @@ class AirSimDroneEnv(AirSimEnv):
         done = 0
 
         if self.state["collision"]:
-            reward = -100
+            self.rewards = -100
             done = 1
         else:
             distance = np.linalg.norm(self.destination - quad_pt)
             prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
 
             if distance > prev_distance:
-                reward = -2
+                self.rewards = -2
             else:
                 if distance == 0:
                     reward_dist = 100
@@ -117,25 +118,27 @@ class AirSimDroneEnv(AirSimEnv):
                 reward_speed = np.linalg.norm([self.state["velocity"].x_val,
                                             self.state["velocity"].y_val,
                                             self.state["velocity"].z_val,])
-                reward = reward_dist + reward_speed
+                self.rewards = reward_dist + reward_speed
     
 
-        self.total_rewards += reward
+        self.total_rewards += self.rewards
         if self.total_rewards < -150:
             done = 1
         
         if done == 1:
             self.total_rewards = 0
 
-        print("reward ", format(reward, ".3f") , "\t[  " , format(reward_dist, ".3f"), ", ", format(reward_speed, ".3f"), " ]\ttotal ", format(self.total_rewards, ".3f"), "\tdistance ", format(distance, ".2f") )
+        # print("reward ", format(reward, ".3f") , "\t[  " , format(reward_dist, ".3f"), ", ", format(reward_speed, ".3f"), " ]\ttotal ", format(self.total_rewards, ".3f"), "\tdistance ", format(distance, ".2f") )
 
-        return reward, done
+        return self.rewards, done
 
 
     def step(self, action):
         self._do_action(action)
         obs = self._get_obs()
         reward, done = self._compute_reward()
+
+        print("reward ", format(reward, ".3f") , "\tdone " + str(done) )
 
         return obs, reward, done, self.state
 
