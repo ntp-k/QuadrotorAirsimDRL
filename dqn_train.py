@@ -9,7 +9,7 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, EveryNTimesteps
 
 # from stable_baselines3 import results_plotter
 # from stable_baselines3.results_plotter import load_results, ts2xy
@@ -100,34 +100,32 @@ class TensorboardCallback(BaseCallback):
 
 reward_callback = EveryNTimesteps(
     n_steps=1,
-    callbacks = TensorboardCallback()
+    callback = TensorboardCallback()
 )
 
-callbacks.append(eval_callback)
-callbacks.append(reward_callback)
+# callbacks.append(eval_callback)
+# callbacks.append(reward_callback)
+
+
 
 kwargs = {}
 kwargs["callback"] = callbacks
 
-
-
 # Train for a certain number of timesteps
-# model.learn(
-#     total_timesteps=int(time_steps),
-#     tb_log_name="dqn_" + str(time_steps) + "_time_steps",
-#     **kwargs
-# )
+model.learn(
+    total_timesteps=int(time_steps),
+    tb_log_name="dqn_" + str(time_steps) + "_time_steps",
+    reset_num_timesteps=False,
+    **kwargs
+)
 
 model.learn(
     total_timesteps=int(time_steps),
-    tb_log_name="test_" + str(time_steps) + "_time_steps"
+    tb_log_name="test_" + str(time_steps) + "_time_steps",
+    callback=TensorboardCallback()
 )
 
 
-
-# tb = program.TensorBoard()
-# tb.configure(argv=[None, '--logdir', './tb_logs/'])
-# tb.launch()
 
 # results_plotter.plot_results([log_path], time_steps, results_plotter.X_TIMESTEPS, "DQN_train")
 # plt.show()
