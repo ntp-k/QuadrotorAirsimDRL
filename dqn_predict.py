@@ -1,11 +1,12 @@
 import gym
 from gym import spaces
 
-from airsim
+import airsim
 from airgym.envs.airsim_env import AirSimEnv
-from airgym.envs.drone_env import AirSimDroneEnv
 
 from stable_baselines3 import DQN
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 
 import numpy as np
 
@@ -32,15 +33,12 @@ env = DummyVecEnv(
 # Wrap env as VecTransposeImage to allow SB to handle frame observations
 env = VecTransposeImage(env)
 
-
-del model # remove to demonstrate saving and loading
-
-model = DQN.load("dqn_airsim_drone_policy")
+model = DQN.load("model/dqn_airsim_drone_policy")
 
 obs = env.reset()
 while True:
     action, _states = model.predict(obs, deterministic=True)
     obs, reward, done, info = env.step(action)
-    env.render()
     if done:
       obs = env.reset()
+      break

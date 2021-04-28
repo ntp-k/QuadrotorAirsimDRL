@@ -9,12 +9,10 @@ from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, EveryNTimesteps
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, EveryNTimesteps, CheckpointCallback
 
 # from stable_baselines3 import results_plotter
 # from stable_baselines3.results_plotter import load_results, ts2xy
-
-from stable_baselines3.common.monitor import Monitor
 
 import matplotlib.pyplot as plt
 from tensorboard import program
@@ -31,7 +29,7 @@ client.armDisarm(True)
 
 #configuration
 destination = np.array([70,-5,-20])
-time_steps = 5
+time_steps = 50
 log_path = './tb_logs/'
 
 env = DummyVecEnv(
@@ -59,10 +57,10 @@ model = DQN(
     env,
     learning_rate=0.00025,
     verbose=1,
-    batch_size=32,
-    train_freq=4,
-    target_update_interval=10000,
-    learning_starts=10000,
+    batch_size=5,
+    train_freq=5,
+    target_update_interval=10,
+    learning_starts=10,
     buffer_size=500000,
     max_grad_norm=10,
     exploration_fraction=0.1,
@@ -70,59 +68,69 @@ model = DQN(
     tensorboard_log=log_path,
 )
 
+
+############################################# Callbacks #############################################
+#####################################################################################################
 # Create an evaluation callback with the same env, called every 10000 iterations
-callbacks = []
-eval_callback = EvalCallback(
-    env,
-    callback_on_new_best=None,
-    n_eval_episodes=5,
-    best_model_save_path=".",
-    log_path=".",
-    eval_freq=10000,
-)
+# callbacks = []
+# eval_callback = EvalCallback(
+#     env,
+#     callback_on_new_best=None,
+#     n_eval_episodes=5,
+#     best_model_save_path=".",
+#     log_path=".",
+#     eval_freq=50,
+# )
 
 
-class TensorboardCallback(BaseCallback):
-    def __init__(self, verbose=1):
-        super(TensorboardCallback, self).__init__(verbose)
-        self.cum_rew = 0
+# class TensorboardCallback(BaseCallback):
+#     def __init__(self, verbose=1):
+#         super(TensorboardCallback, self).__init__(verbose)
+#         self.cum_rew = 0
 
-    def _on_rollout_end(self) -> None:
-        self.logger.record("rollout/cum_rew", self.cum_rew)
+#     def _on_rollout_end(self) -> None:
+#         self.logger.record("rollout/cum_rew", self.cum_rew)
 
-        # reset vars once recorded
-        self.cum_rew = 0
+#         # reset vars once recorded
+#         self.cum_rew = 0
     
-    def _on_step(self) -> bool:
-        # log reward
-        self.cum_rew += (self.training_env.get_attr("rewards")[0])[-1]
-        return True
+#     def _on_step(self) -> bool:
+#         # log reward
+#         self.cum_rew += (self.training_env.get_attr("rewards")[0])[-1])
+#         return True
 
-reward_callback = EveryNTimesteps(
-    n_steps=1,
-    callback = TensorboardCallback()
-)
+# reward_callback = EveryNTimesteps(
+#     n_steps=1,
+#     callback = TensorboardCallback()
+# )
+
+checkpoint_callback = CheckpointCallback(save_freq=10, save_path='./logs/',
+                                         name_prefix='rl_model')
+
 
 # callbacks.append(eval_callback)
 # callbacks.append(reward_callback)
 
 
+# kwargs = {}
+# kwargs["callback"] = callbacks
 
-kwargs = {}
-kwargs["callback"] = callbacks
+############################################# Callbacks #############################################
+#####################################################################################################
 
 # Train for a certain number of timesteps
-model.learn(
-    total_timesteps=int(time_steps),
-    tb_log_name="dqn_" + str(time_steps) + "_time_steps",
-    reset_num_timesteps=False,
-    **kwargs
-)
+# model.learn(
+#     total_timesteps=int(time_steps),
+#     tb_log_name="dqn_" + str(time_steps) + "_time_steps",
+#     reset_num_timesteps=False,
+#     **kwargs
+# )
 
 model.learn(
     total_timesteps=int(time_steps),
+    log_interval=2,
     tb_log_name="test_" + str(time_steps) + "_time_steps",
-    callback=TensorboardCallback()
+    callback=checkpoint_callback
 )
 
 

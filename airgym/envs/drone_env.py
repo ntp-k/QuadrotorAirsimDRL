@@ -97,11 +97,11 @@ class AirSimDroneEnv(AirSimEnv):
                                       self.state["prev_position"].z_val,)))
 
         distance = 0.0
-        done = 0
+        done = False
 
         if self.state["collision"]:
             self.rewards = -100
-            done = 1
+            done = True
         else:
             distance = np.linalg.norm(self.destination - quad_pt)
             prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
@@ -111,7 +111,7 @@ class AirSimDroneEnv(AirSimEnv):
             else:
                 if distance == 0:
                     reward_dist = 100
-                    done = 1
+                    done = True
                 else:
                     reward_dist = 10/distance
 
@@ -123,9 +123,9 @@ class AirSimDroneEnv(AirSimEnv):
 
         self.total_rewards += self.rewards
         if self.total_rewards < -150:
-            done = 1
+            done = True
         
-        if done == 1:
+        if done:
             self.total_rewards = 0
 
         # print("reward ", format(reward, ".3f") , "\t[  " , format(reward_dist, ".3f"), ", ", format(reward_speed, ".3f"), " ]\ttotal ", format(self.total_rewards, ".3f"), "\tdistance ", format(distance, ".2f") )
