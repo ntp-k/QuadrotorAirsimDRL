@@ -18,7 +18,6 @@ class AirSimDroneEnv(AirSimEnv):
         self.step_length = step_length
         self.image_shape = image_shape
         self.destination = destination
-        self.rewards = float(0.0)
         self.total_rewards = float(0.0)
 
         self.state = {
@@ -28,7 +27,8 @@ class AirSimDroneEnv(AirSimEnv):
         }
 
         self.drone = airsim.MultirotorClient(ip=ip_address)
-        self.action_space = spaces.Discrete(7)
+        # self.action_space = spaces.Discrete(7)
+        self.action_space = spaces.Discrete(5)
         self._setup_flight()
 
         self.image_request = airsim.ImageRequest(
@@ -83,8 +83,8 @@ class AirSimDroneEnv(AirSimEnv):
         ).join()
     
 
-    def _compute_reward(self):
-        self.rewards = 0
+    def _compute_reward(self, action):
+        rewards = float(0.0)
         reward_dist = 0
         reward_speed = 0
 
@@ -100,14 +100,14 @@ class AirSimDroneEnv(AirSimEnv):
         done = False
 
         if self.state["collision"]:
-            self.rewards = -100
+            rewards = -100
             done = True
         else:
             distance = np.linalg.norm(self.destination - quad_pt)
             prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
 
             if distance > prev_distance:
-                self.rewards = -2
+                rewards = -2
             else:
                 if distance == 0:
                     reward_dist = 100
@@ -118,27 +118,27 @@ class AirSimDroneEnv(AirSimEnv):
                 reward_speed = np.linalg.norm([self.state["velocity"].x_val,
                                             self.state["velocity"].y_val,
                                             self.state["velocity"].z_val,])
-                self.rewards = reward_dist + reward_speed
+                rewards = reward_dist + reward_speed
     
 
-        self.total_rewards += self.rewards
+        self.total_rewards += rewards
         if self.total_rewards < -150:
             done = True
-        
-        if done:
-            self.total_rewards = 0
 
         # print("reward ", format(reward, ".3f") , "\t[  " , format(reward_dist, ".3f"), ", ", format(reward_speed, ".3f"), " ]\ttotal ", format(self.total_rewards, ".3f"), "\tdistance ", format(distance, ".2f") )
 
-        return self.rewards, done
+        return rewards, done
 
 
     def step(self, action):
         self._do_action(action)
         obs = self._get_obs()
-        reward, done = self._compute_reward()
+        reward, done = self._compute_reward(action)
 
-        print("reward ", format(reward, ".3f") , "\tdone " + str(done) )
+        print("reward ", format(reward, ".3f"), "\ttotal_reward ", format(self.total_rewards, ".3f") , "\tdone " + str(done) )
+
+        if done:
+            self.total_rewards = 0
 
         return obs, reward, done, self.state
 
@@ -148,19 +148,19 @@ class AirSimDroneEnv(AirSimEnv):
 
     def interpret_action(self, action):
         #NED coordinate system (X,Y,Z) : +X is North, +Y is East and +Z is Down
-        if action == 0: # North
+        if action == 0: # forward
             quad_offset = (self.step_length, 0, 0)
-        elif action == 1: # East
+        elif action == 1: # slide right
             quad_offset = (0, self.step_length, 0)
-        elif action == 2: # Down
+        elif action == 2: # downward
             quad_offset = (0, 0, self.step_length)
-        elif action == 3: # South
-            quad_offset = (-self.step_length, 0, 0)
-        elif action == 4: # West
+        # elif action == 3: # backward
+        #     quad_offset = (-self.step_length, 0, 0)
+        elif action == 3: # slide right
             quad_offset = (0, -self.step_length, 0)
-        elif action == 5: # Up
+        elif action == 4: # upward
             quad_offset = (0, 0, -self.step_length)
-        else: # Origin
-            quad_offset = (0, 0, 0)
+        # else: # Origin
+        #     quad_offset = (0, 0, 0)
 
         return quad_offset

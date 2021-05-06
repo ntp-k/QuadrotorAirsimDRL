@@ -28,7 +28,7 @@ client.enableApiControl(True)
 client.armDisarm(True)
 
 #configuration
-destination = np.array([70,-5,-20])
+destination = np.array([225,0,-50])
 time_steps = 50
 log_path = './tb_logs/'
 
