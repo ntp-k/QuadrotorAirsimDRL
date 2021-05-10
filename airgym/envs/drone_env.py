@@ -20,6 +20,14 @@ class AirSimDroneEnv(AirSimEnv):
         self.destination = destination
         self.total_rewards = float(0.0)
 
+        #NED coordinate system (X,Y,Z) : +X is North, +Y is East and +Z is Down
+        self.MAX_UPWARD = -60
+        self.MAX_DOWNWARD = -10
+        self.MAX_WEST = -abs(destination[1]) - 100
+        self.MAX_EAST = abs(destination[1]) + 100
+        self.MAX_SOUTH =  -100
+        self.MAX_NORTH = abs(destination[0]) + 100
+        
         self.state = {
             "position": np.zeros(3),
             "collision": False,
@@ -27,8 +35,9 @@ class AirSimDroneEnv(AirSimEnv):
         }
 
         self.drone = airsim.MultirotorClient(ip=ip_address)
-        # self.action_space = spaces.Discrete(7)
-        self.action_space = spaces.Discrete(5)
+        # self.action_space = spaces.Discrete(6)    
+        self.action_space = spaces.Discrete(3)
+        self.destination = self._setup_destination()
         self._setup_flight()
 
         self.image_request = airsim.ImageRequest(
@@ -44,7 +53,13 @@ class AirSimDroneEnv(AirSimEnv):
         self.drone.armDisarm(True)
 
         # Set home position and velocity
-        self.drone.moveToPositionAsync(0, 0, -10, 10).join()
+        self.drone.moveToPositionAsync(0, 0, -40, 6).join()
+        self.drone.moveByVelocityAsync(1, 0, 0, 1).join()
+
+    def _setup_destination(self):
+        #random area A,B,C (ratio 1:2:3)
+
+        return np.array([x,y,z])
 
     def transform_obs(self, responses):
         img1d = np.array(responses[0].image_data_float, dtype=np.float)
@@ -102,16 +117,29 @@ class AirSimDroneEnv(AirSimEnv):
         if self.state["collision"]:
             rewards = -100
             done = True
+            print("done : collision")
+        elif self.state["position"].z_val < self.MAX_UPWARD or\
+            self.state["position"].z_val > self.MAX_DOWNWARD or\
+            self.state["position"].y_val < self.MAX_WEST or\
+            self.state["position"].y_val > self.MAX_EAST or\
+            self.state["position"].x_val < self.MAX_SOUTH or\
+            self.state["position"].x_val > self.MAX_NORTH:
+                reward = -100
+                done = True
+                print("done : out of range")
         else:
             distance = np.linalg.norm(self.destination - quad_pt)
             prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
 
             if distance > prev_distance:
                 rewards = -2
+            elif distance == prev_distance:
+                rewards = 0
             else:
                 if distance == 0:
                     reward_dist = 100
                     done = True
+                    print("done : arrive at destination")
                 else:
                     reward_dist = 10/distance
 
@@ -135,7 +163,7 @@ class AirSimDroneEnv(AirSimEnv):
         obs = self._get_obs()
         reward, done = self._compute_reward(action)
 
-        print("reward ", format(reward, ".3f"), "\ttotal_reward ", format(self.total_rewards, ".3f") , "\tdone " + str(done) )
+        print("reward ", format(reward, ".2f"), "\ttotal_reward ", format(self.total_rewards, ".2f") , "\tdone " + str(done) )
 
         if done:
             self.total_rewards = 0
@@ -143,6 +171,7 @@ class AirSimDroneEnv(AirSimEnv):
         return obs, reward, done, self.state
 
     def reset(self):
+        self.destination = self._setup_destination()
         self._setup_flight()
         return self._get_obs()
 
@@ -152,14 +181,14 @@ class AirSimDroneEnv(AirSimEnv):
             quad_offset = (self.step_length, 0, 0)
         elif action == 1: # slide right
             quad_offset = (0, self.step_length, 0)
-        elif action == 2: # downward
-            quad_offset = (0, 0, self.step_length)
-        # elif action == 3: # backward
+        # elif action == 2: # downward
+        #     quad_offset = (0, 0, self.step_length)
+        # # elif action == 3: # backward
         #     quad_offset = (-self.step_length, 0, 0)
-        elif action == 3: # slide right
+        elif action == 2: # slide left
             quad_offset = (0, -self.step_length, 0)
-        elif action == 4: # upward
-            quad_offset = (0, 0, -self.step_length)
+        # elif action == 5: # upward
+        #     quad_offset = (0, 0, -self.step_length)
         # else: # Origin
         #     quad_offset = (0, 0, 0)
 

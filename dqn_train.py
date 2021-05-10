@@ -28,8 +28,8 @@ client.enableApiControl(True)
 client.armDisarm(True)
 
 #configuration
-destination = np.array([225,0,-50])
-time_steps = 50
+destination = np.array([225,0,-40])
+time_steps = 500
 log_path = './tb_logs/'
 
 env = DummyVecEnv(
@@ -104,7 +104,7 @@ model = DQN(
 #     callback = TensorboardCallback()
 # )
 
-checkpoint_callback = CheckpointCallback(save_freq=10, save_path='./logs/',
+checkpoint_callback = CheckpointCallback(save_freq=10, save_path='./checkpoint/',
                                          name_prefix='rl_model')
 
 

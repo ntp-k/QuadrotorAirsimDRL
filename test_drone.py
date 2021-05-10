@@ -19,9 +19,9 @@ else:
 print("flying test...")
 # #NED coordinate system, +X is North, +Y is East and +Z is Down
 print("climbing attitude")
-client.moveToPositionAsync(0,0,-40,10).join()
-print("presude to destination")
-client.moveToPositionAsync(225,0,-40,10).join()
-client.moveToPositionAsync(225,0,0,10).join()
-print("done")
+client.moveToPositionAsync(0,0,-80,10).join()
+# print("presude to destination")
+# client.moveToPositionAsync(225,0,-40,10).join()
+# client.moveToPositionAsync(225,0,0,10).join()
+# print("done")
 
