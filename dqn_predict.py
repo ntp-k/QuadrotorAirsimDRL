@@ -33,12 +33,19 @@ env = DummyVecEnv(
 # Wrap env as VecTransposeImage to allow SB to handle frame observations
 env = VecTransposeImage(env)
 
-model = DQN.load("model/dqn_airsim_drone_policy")
+# model = DQN.load("model/dqn_airsim_drone_policy")
+model = DQN.load("checkpoint/rl_model_30_steps.zip")
 
-obs = env.reset()
-while True:
-    action, _states = model.predict(obs, deterministic=True)
-    obs, reward, done, info = env.step(action)
-    if done:
-      obs = env.reset()
-      break
+from stable_baselines3.common.evaluation import evaluate_policy
+
+mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=3, deterministic=True)
+
+print(f"mean_reward = [{mean_reward:.2f}] +/- {std_reward}")
+
+# obs = env.reset()
+# while True:
+#     action, _states = model.predict(obs, deterministic=True)
+#     obs, reward, done, info = env.step(action)
+#     if done:
+#       obs = env.reset()
+#       break

@@ -7,11 +7,11 @@ from airgym.envs.airsim_env import AirSimEnv
 import numpy as np
 import math
 import time
+import random
 from argparse import ArgumentParser
 
 
 class AirSimDroneEnv(AirSimEnv):
-
 
     def __init__(self, ip_address, step_length, image_shape, destination):
         super().__init__(image_shape)
@@ -19,47 +19,64 @@ class AirSimDroneEnv(AirSimEnv):
         self.image_shape = image_shape
         self.destination = destination
         self.total_rewards = float(0.0)
+        self.done_flag = -1
 
         #NED coordinate system (X,Y,Z) : +X is North, +Y is East and +Z is Down
-        self.MAX_UPWARD = -60
-        self.MAX_DOWNWARD = -10
-        self.MAX_WEST = -abs(destination[1]) - 100
-        self.MAX_EAST = abs(destination[1]) + 100
+        self.AVERAGE_ALTITUDE = -40
+        self.MAX_ALTITUDE = -60
+        self.MIN_ALTITUDE = -10
         self.MAX_SOUTH =  -100
-        self.MAX_NORTH = abs(destination[0]) + 100
+
+        self.action_space = spaces.Discrete(6)    
+        # self.action_space = spaces.Discrete(3)
         
         self.state = {
             "position": np.zeros(3),
             "collision": False,
             "prev_position": np.zeros(3),
         }
-
         self.drone = airsim.MultirotorClient(ip=ip_address)
-        # self.action_space = spaces.Discrete(6)    
-        self.action_space = spaces.Discrete(3)
-        self.destination = self._setup_destination()
         self._setup_flight()
-
         self.image_request = airsim.ImageRequest(
             3, airsim.ImageType.DepthPerspective, True, False
         )
 
+
     def __del__(self):
         self.drone.reset()
+
 
     def _setup_flight(self):
         self.drone.reset()
         self.drone.enableApiControl(True)
         self.drone.armDisarm(True)
+    
 
-        # Set home position and velocity
+    def _setup_starting_position(self):
+        # Set starting position and velocity
         self.drone.moveToPositionAsync(0, 0, -40, 6).join()
         self.drone.moveByVelocityAsync(1, 0, 0, 1).join()
 
-    def _setup_destination(self):
-        #random area A,B,C (ratio 1:2:3)
 
-        return np.array([x,y,z])
+    def _setup_destination(self):
+        #random area a,b,c (ratio 1:2:3)
+        area = random.randrange(1,7) # a -> 1 | b -> 2,3 | c -> 4,5,6
+        if area < 2: # a
+            x = random.randrange(230,271)
+            y = random.randrange(45,71)
+            print("Destination A ", [x,y,self.AVERAGE_ALTITUDE])
+        elif area < 4: # b
+            x = random.randrange(290,351)
+            y = random.randrange(-75,-44)
+            print("Destination B ", [x,y,self.AVERAGE_ALTITUDE])
+        else: # c
+            x = random.randrange(450,516)
+            y = random.randrange(-75,56)
+            print("Destination C ", [x,y,self.AVERAGE_ALTITUDE])
+
+
+        return np.array([x,y,self.AVERAGE_ALTITUDE])
+
 
     def transform_obs(self, responses):
         img1d = np.array(responses[0].image_data_float, dtype=np.float)
@@ -72,6 +89,7 @@ class AirSimDroneEnv(AirSimEnv):
         im_final = np.array(image.resize((84, 84)).convert("L"))
 
         return im_final.reshape([84, 84, 1])
+
 
     def _get_obs(self):
         responses = self.drone.simGetImages([self.image_request])
@@ -86,6 +104,7 @@ class AirSimDroneEnv(AirSimEnv):
         self.state["collision"] = collision
 
         return image
+
 
     def _do_action(self, action):
         quad_offset = self.interpret_action(action)
@@ -117,16 +136,16 @@ class AirSimDroneEnv(AirSimEnv):
         if self.state["collision"]:
             rewards = -100
             done = True
-            print("done : collision")
-        elif self.state["position"].z_val < self.MAX_UPWARD or\
-            self.state["position"].z_val > self.MAX_DOWNWARD or\
-            self.state["position"].y_val < self.MAX_WEST or\
-            self.state["position"].y_val > self.MAX_EAST or\
+            self.done_flag = 0
+        elif self.state["position"].z_val < self.MAX_ALTITUDE or\
+            self.state["position"].z_val > self.MIN_ALTITUDE or\
+            self.state["position"].y_val < -abs(self.destination[1]) - 100 or\
+            self.state["position"].y_val > abs(self.destination[1]) + 100 or\
             self.state["position"].x_val < self.MAX_SOUTH or\
-            self.state["position"].x_val > self.MAX_NORTH:
+            self.state["position"].x_val > abs(self.destination[0]) + 100:
                 reward = -100
                 done = True
-                print("done : out of range")
+                self.done_flag = 1
         else:
             distance = np.linalg.norm(self.destination - quad_pt)
             prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
@@ -139,7 +158,7 @@ class AirSimDroneEnv(AirSimEnv):
                 if distance == 0:
                     reward_dist = 100
                     done = True
-                    print("done : arrive at destination")
+                    self.done_flag = 2
                 else:
                     reward_dist = 10/distance
 
@@ -150,8 +169,9 @@ class AirSimDroneEnv(AirSimEnv):
     
 
         self.total_rewards += rewards
-        if self.total_rewards < -150:
+        if self.total_rewards < -100:
             done = True
+            self.done_flag = 3
 
         # print("reward ", format(reward, ".3f") , "\t[  " , format(reward_dist, ".3f"), ", ", format(reward_speed, ".3f"), " ]\ttotal ", format(self.total_rewards, ".3f"), "\tdistance ", format(distance, ".2f") )
 
@@ -167,13 +187,26 @@ class AirSimDroneEnv(AirSimEnv):
 
         if done:
             self.total_rewards = 0
+            if self.done_flag == 0:
+                print("done : collision")
+            elif self.done_flag == 1:
+                print("done : out of range")
+            elif self.done_flag == 2:
+                print("done : reach destination")
+            else:
+                print("done : total rewards < -100")
+            self.done_flag = -1
 
         return obs, reward, done, self.state
 
+
     def reset(self):
+        print("reset")
         self.destination = self._setup_destination()
         self._setup_flight()
+        self._setup_starting_position()
         return self._get_obs()
+
 
     def interpret_action(self, action):
         #NED coordinate system (X,Y,Z) : +X is North, +Y is East and +Z is Down
@@ -181,15 +214,21 @@ class AirSimDroneEnv(AirSimEnv):
             quad_offset = (self.step_length, 0, 0)
         elif action == 1: # slide right
             quad_offset = (0, self.step_length, 0)
-        # elif action == 2: # downward
-        #     quad_offset = (0, 0, self.step_length)
-        # # elif action == 3: # backward
-        #     quad_offset = (-self.step_length, 0, 0)
-        elif action == 2: # slide left
+        elif action == 2: # downward
+            quad_offset = (0, 0, self.step_length)
+        elif action == 3: # backward
+            quad_offset = (-self.step_length, 0, 0)
+        elif action == 4: # slide left
             quad_offset = (0, -self.step_length, 0)
-        # elif action == 5: # upward
-        #     quad_offset = (0, 0, -self.step_length)
-        # else: # Origin
-        #     quad_offset = (0, 0, 0)
+        elif action == 5: # upward
+            quad_offset = (0, 0, -self.step_length)
+
+
+        # if action == 0: # forward
+        #     quad_offset = (self.step_length, 0, 0)
+        # elif action == 1: # slide right
+        #     quad_offset = (0, self.step_length, 0)
+        # elif action == 2: # slide left
+        #     quad_offset = (0, -self.step_length, 0)
 
         return quad_offset

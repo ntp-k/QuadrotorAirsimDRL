@@ -11,9 +11,6 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, EveryNTimesteps, CheckpointCallback
 
-# from stable_baselines3 import results_plotter
-# from stable_baselines3.results_plotter import load_results, ts2xy
-
 import matplotlib.pyplot as plt
 from tensorboard import program
 import numpy as np
@@ -27,11 +24,6 @@ client.confirmConnection()
 client.enableApiControl(True)
 client.armDisarm(True)
 
-#configuration
-destination = np.array([225,0,-40])
-time_steps = 500
-log_path = './tb_logs/'
-
 env = DummyVecEnv(
     [
         lambda: Monitor(
@@ -40,7 +32,7 @@ env = DummyVecEnv(
                 ip_address="127.0.0.1",
                 step_length=1,
                 image_shape=(84, 84, 1),
-                destination=destination,
+                destination=np.array([0,0,0]),
             )
         )
     ]
@@ -49,7 +41,6 @@ env = DummyVecEnv(
 # Wrap env as VecTransposeImage to allow SB to handle frame observations
 env = VecTransposeImage(env)
 
-# env = Monitor(env, log_path)
 
 # Initialize RL algorithm type and parameters
 model = DQN(
@@ -57,66 +48,32 @@ model = DQN(
     env,
     learning_rate=0.00025,
     verbose=1,
-    batch_size=5,
-    train_freq=5,
-    target_update_interval=10,
-    learning_starts=10,
+    batch_size=32,
+    train_freq=4,
+    target_update_interval=500,
+    learning_starts=100,
     buffer_size=500000,
     max_grad_norm=10,
     exploration_fraction=0.1,
     exploration_final_eps=0.01,
-    tensorboard_log=log_path,
+    tensorboard_log='./tb_logs/',
 )
 
 
 ############################################# Callbacks #############################################
-#####################################################################################################
-# Create an evaluation callback with the same env, called every 10000 iterations
-# callbacks = []
+
 # eval_callback = EvalCallback(
 #     env,
 #     callback_on_new_best=None,
 #     n_eval_episodes=5,
-#     best_model_save_path=".",
-#     log_path=".",
-#     eval_freq=50,
-# )
-
-
-# class TensorboardCallback(BaseCallback):
-#     def __init__(self, verbose=1):
-#         super(TensorboardCallback, self).__init__(verbose)
-#         self.cum_rew = 0
-
-#     def _on_rollout_end(self) -> None:
-#         self.logger.record("rollout/cum_rew", self.cum_rew)
-
-#         # reset vars once recorded
-#         self.cum_rew = 0
-    
-#     def _on_step(self) -> bool:
-#         # log reward
-#         self.cum_rew += (self.training_env.get_attr("rewards")[0])[-1])
-#         return True
-
-# reward_callback = EveryNTimesteps(
-#     n_steps=1,
-#     callback = TensorboardCallback()
+#     best_model_save_path="./model/",
+#     log_path="./eval_log/",
+#     eval_freq=500,
 # )
 
 checkpoint_callback = CheckpointCallback(save_freq=10, save_path='./checkpoint/',
-                                         name_prefix='rl_model')
+                                         name_prefix='dqn_policy')
 
-
-# callbacks.append(eval_callback)
-# callbacks.append(reward_callback)
-
-
-# kwargs = {}
-# kwargs["callback"] = callbacks
-
-############################################# Callbacks #############################################
-#####################################################################################################
 
 # Train for a certain number of timesteps
 # model.learn(
@@ -126,17 +83,14 @@ checkpoint_callback = CheckpointCallback(save_freq=10, save_path='./checkpoint/'
 #     **kwargs
 # )
 
+time_steps = 10000 #approximately 13 hours 40 mins
+
 model.learn(
     total_timesteps=int(time_steps),
-    log_interval=2,
-    tb_log_name="test_" + str(time_steps) + "_time_steps",
-    callback=checkpoint_callback
+    log_interval=1,
+    tb_log_name="train_" + str(time_steps) + "_steps",
+    callback=checkpoint_callback,
 )
-
-
-
-# results_plotter.plot_results([log_path], time_steps, results_plotter.X_TIMESTEPS, "DQN_train")
-# plt.show()
 
 # Save policy weights
 model.save("model/dqn_airsim_drone_policy")
