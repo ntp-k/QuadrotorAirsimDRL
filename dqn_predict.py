@@ -34,11 +34,11 @@ env = DummyVecEnv(
 env = VecTransposeImage(env)
 
 # model = DQN.load("model/dqn_airsim_drone_policy")
-model = DQN.load("checkpoint/rl_model_30_steps.zip")
+model = DQN.load("checkpoint/dqn_policy_5300_steps.zip")
 
 from stable_baselines3.common.evaluation import evaluate_policy
 
-mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=3, deterministic=True)
+mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=5, deterministic=True)
 
 print(f"mean_reward = [{mean_reward:.2f}] +/- {std_reward}")
 

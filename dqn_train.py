@@ -50,9 +50,9 @@ model = DQN(
     verbose=1,
     batch_size=32,
     train_freq=4,
-    target_update_interval=500,
-    learning_starts=100,
-    buffer_size=500000,
+    target_update_interval=200,
+    learning_starts=200,
+    buffer_size=10000,
     max_grad_norm=10,
     exploration_fraction=0.1,
     exploration_final_eps=0.01,
@@ -71,7 +71,7 @@ model = DQN(
 #     eval_freq=500,
 # )
 
-checkpoint_callback = CheckpointCallback(save_freq=10, save_path='./checkpoint/',
+checkpoint_callback = CheckpointCallback(save_freq=100, save_path='./checkpoint/12_May/',
                                          name_prefix='dqn_policy')
 
 
@@ -87,7 +87,7 @@ time_steps = 10000 #approximately 13 hours 40 mins
 
 model.learn(
     total_timesteps=int(time_steps),
-    log_interval=1,
+    log_interval=5,
     tb_log_name="train_" + str(time_steps) + "_steps",
     callback=checkpoint_callback,
 )
