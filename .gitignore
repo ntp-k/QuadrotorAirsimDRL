@@ -1,6 +1,8 @@
 checkpoint/
-image/
+images/
 model/
 stable_baselines3/
 tb_logs/
-test.*
+test_checkpount/
+test_tb_logs/
+test/

@@ -32,25 +32,25 @@ env = DummyVecEnv(
                 ip_address="127.0.0.1",
                 step_length=1,
                 image_shape=(84, 84, 1),
-                destination=np.array([300,0,-30]),
+                destination=np.array([200,0,-30]),
             )
         )
     ]
 )
 
 # Wrap env as VecTransposeImage to allow SB to handle frame observations
-# env = VecTransposeImage(env)
+env = VecTransposeImage(env)
 
 # Initialize RL algorithm type and parameters
 model = DQN(
-    "MultiInputPolicy",
+    "CnnPolicy",
     env,
     learning_rate=0.00025,
     verbose=1,
     batch_size=32,
     train_freq=4,
-    target_update_interval=10000,
-    learning_starts=10000,
+    target_update_interval=1000,
+    learning_starts=1000,
     buffer_size=50000,
     max_grad_norm=10,
     exploration_fraction=0.1,
@@ -58,37 +58,37 @@ model = DQN(
     tensorboard_log='./tb_logs/',
 )
 
-checkpoint_callback = CheckpointCallback(save_freq=5000, save_path='./checkpoint/v11_dqn_multiInput_4actions_2obs_simpleRF_100000_steps/',
+checkpoint_callback = CheckpointCallback(save_freq=500, save_path='./checkpoint/v12_dqn_cnnPolicy_4actions_imageObs_10000_steps/',
                                          name_prefix='dqn_policy')
 
-time_steps = 100000
+time_steps = 10000
 model.learn(
     total_timesteps=int(time_steps),
     log_interval=5,
-    tb_log_name="v11_dqn_multiInput_4actions_2obs_simpleRF_100000_steps",
+    tb_log_name="v12_dqn_cnnPolicy_4actions_imageObs_10000_steps",
     callback=checkpoint_callback,
 )
 
 # Save policy weights
 # model.save("model/dqn_airsim_drone_policy")
-model.save("model/v11_dqn_multiInput_4actions_2obs_simpleRF_100000_steps")
+model.save("model/v12_dqn_cnnPolicy_4actions_imageObs_10000_steps")
 
 
-# time_steps = 100000
+# time_steps = 100
 # model = DQN(
-#     "MultiInputPolicy",
+#     "CnnPolicy",
 #     env,
 #     learning_rate=0.00025,
 #     verbose=1,
 #     batch_size=32,
 #     train_freq=4,
-#     target_update_interval=200,
-#     learning_starts=200,
-#     buffer_size=10000,
+#     target_update_interval=10000,
+#     learning_starts=10000,
+#     buffer_size=50000,
 #     max_grad_norm=10,
 #     exploration_fraction=0.1,
 #     exploration_final_eps=0.01,
-#     tensorboard_log='./test_tb_logs/',
+#     tensorboard_log='./tb_logs/',
 # )
 
 # checkpoint_callback = CheckpointCallback(save_freq=100, save_path='./test_checkpoint/dqn_4actions_10000_steps/',
