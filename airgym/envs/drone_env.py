@@ -22,6 +22,9 @@ class AirSimDroneEnv(AirSimEnv):
         # self.middle_pixel = 0
         self.total_rewards = float(0.0)
         self.distance = 300.0
+        self.pass1 = False
+        self.pass2 = False
+        self.pass3 = False
 
         #NED coordinate system (X,Y,Z) : +X is North, +Y is East and +Z is Down
         self.MAX_ALTITUDE = -60
@@ -88,15 +91,12 @@ class AirSimDroneEnv(AirSimEnv):
 
     def transform_obs(self, responses):
         img1d = np.array(responses[0].image_data_float, dtype=np.float)
-        img1d = np.full(img1d.size, 255, dtype=np.float ) - (255/img1d)
-        # img1d = 255 / np.maximum(np.ones(img1d.size), img1d)
+        img1d = np.where(img1d > 255, 255, img1d)
         img2d = np.reshape(img1d, (responses[0].height, responses[0].width))
 
-        
 
         image = Image.fromarray(img2d)
         im_final = np.array(image.resize((84, 84)).convert("L"))
-        # self.middle_pixel = im_final[41][41]
 
         return im_final.reshape([84, 84, 1])
 
@@ -109,24 +109,10 @@ class AirSimDroneEnv(AirSimEnv):
         self.state["prev_position"] = self.state["position"]
         self.state["position"] = self.drone_state.kinematics_estimated.position
         self.state["velocity"] = self.drone_state.kinematics_estimated.linear_velocity
-        # quad_pt = np.array(list((self.state["position"].x_val,
-        #                          self.state["position"].y_val,
-        #                          self.state["position"].z_val,)))
 
         collision = self.drone.simGetCollisionInfo().has_collided
         self.state["collision"] = collision
 
-        # if collision:
-        #     collision = 1
-        # else:
-        #     collision = 0
-        
-        # obs = dict()
-        # obs = {'depth_cam': image,
-        #        'position': quad_pt}
-        #     #    'collision': collision}
-
-        # return obs
         return image
 
 
@@ -144,83 +130,25 @@ class AirSimDroneEnv(AirSimEnv):
 
     def _compute_reward(self, action):
         rewards = float(0.0)
-        # reward_dist = 0
-        # reward_speed = 0
-        # reward_avoiding = 0
-        # distance = 0.0
-        # prev_distance = 0.0
         done = False
-        quad_pt = np.array(list((self.state["position"].x_val,
-                                 self.state["position"].y_val,
-                                 self.state["position"].z_val,)))
-        # prev_quad_pt = np.array(list((self.state["prev_position"].x_val,
-        #                               self.state["prev_position"].y_val,
-        #                               self.state["prev_position"].z_val,)))
-
-        
-        # advanced reward function
-        '''
-        if self.state["collision"]: # collide
-            rewards = -1000
-            done = True
-        elif self.state["position"].z_val < self.MAX_ALTITUDE or self.state["position"].z_val > self.MIN_ALTITUDE or self.state["position"].y_val < self.MAX_LEFT or self.state["position"].y_val > self.MAX_RIGHT or self.state["position"].x_val < self.MAX_SOUTH or self.state["position"].x_val > self.MAX_NORTH: # out of range
-            rewards = -100
-            done = True
-        else: # grant reward
-            # if self.middle_pixel > 246:
-            #     reward_avoiding = 5
-
-            distance = np.linalg.norm(self.destination - quad_pt)
-            prev_distance = np.linalg.norm(self.destination - prev_quad_pt) 
-
-            if distance >= prev_distance: # move opposite of destination or stay still
-                rewards = 0
-            else: # reach destination in range 10 meter
-                if distance <= 10:
-                    reward_dist = 1000
-                    done = True
-                else: # move toward destination, raward is % if travelled distance
-                    reward_dist = ((self.destination[0] - distance) / self.destination[0]) * 100
-
-                reward_speed = np.linalg.norm([self.state["velocity"].x_val,
-                                               self.state["velocity"].y_val,
-                                               self.state["velocity"].z_val,])
-        
-            rewards = reward_dist + reward_speed + reward_avoiding
-        '''
-
-        # simple reward function
-        '''
-        distance = np.linalg.norm(self.destination - quad_pt)
 
         if self.state["collision"]: # collide
             rewards = -100
-            done = True
-        elif distance <= 10: # reach destination within range of 10
-            rewards = 100
-            done = True
-        else:
-            rewards = self.distance - distance
-
-        self.total_rewards += rewards
-        if self.total_rewards <= -100:
-            done = True
-            
-        
-        self.distance = distance
-        '''
-
-        if self.state["collision"]: # collide
-            rewards = -100
-            done = True
-        elif self.state["position"].x_val > 200:
-            rewards = 100
             done = True
         elif self.state["position"].x_val < -80 or self.state["position"].y_val > 80 or self.state["position"].y_val < -80 :
             done = True
-        elif action == 0:
-            rewards = 1
-
+        elif self.state["position"].x_val > 200:
+            rewards = 25
+            done = True
+        elif self.state["position"].x_val > 150 and not self.pass3:
+            rewards = 25
+            self.pass3 = True
+        elif self.state["position"].x_val > 100 and not self.pass2:
+            rewards = 25
+            self.pass2 = True
+        elif self.state["position"].x_val > 50 and not self.pass1:
+            rewards = 25
+            self.pass1 = True
 
         return rewards, done
 
@@ -247,8 +175,11 @@ class AirSimDroneEnv(AirSimEnv):
 
         # print("reward ", format(reward, ".2f"),  "\t  done  " + str(done), "\t action ", movement, "\t    velocity [", format(self.state["velocity"].x_val, ".1f"), ",\t",  format(self.state["velocity"].y_val, ".1f"), ",\t" , format(self.state["velocity"].z_val, ".1f"), "]")
         # print("reward ", format(reward, ".2f"),  "\t  done  " + str(done), "\t action ", movement, "\t    position [", format(self.state["position"].x_val, ".1f"), ",\t",  format(self.state["position"].y_val, ".1f"), ",\t" , format(self.state["position"].z_val, ".1f"), "]")
-        print("reward ", format(reward, ".2f"),  "\t  done  " + str(done), "\t action ", movement)
+        print("reward ", format(reward, ".0f"),  "\t  done  " + str(done), "\t action ", movement)
         if done:
+            self.pass1 = False
+            self.pass2 = False
+            self.pass3 = False
             print('Done!\n')
 
         # if done:

@@ -49,3 +49,10 @@ print(f"mean_reward = [{mean_reward:.2f}] +/- {std_reward}")
 #     if done:
 #       obs = env.reset()
 #       break
+
+
+
+'''
+mean_reward, std_reward = evaluate_policy(default_model, eval_env, n_eval_episodes=100)
+print(f"mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
+'''
