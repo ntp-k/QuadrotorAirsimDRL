@@ -7,7 +7,7 @@ from airgym.envs.airsim_env import AirSimEnv
 from stable_baselines3 import DQN
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
-
+from stable_baselines3.common.evaluation import evaluate_policy
 import numpy as np
 
 # connect to the AirSim simulator
@@ -34,11 +34,11 @@ env = DummyVecEnv(
 env = VecTransposeImage(env)
 
 # model = DQN.load("model/dqn_airsim_drone_policy")
-model = DQN.load("checkpoint/dqn_policy_5300_steps.zip")
+model = DQN.load("checkpoint/v18_dqn_cnnPolicy_4actions_imageObs_100000_steps/dqn_policy_65000_steps.zip")
 
-from stable_baselines3.common.evaluation import evaluate_policy
 
-mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=5, deterministic=True)
+
+mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=1, deterministic=True)
 
 print(f"mean_reward = [{mean_reward:.2f}] +/- {std_reward}")
 

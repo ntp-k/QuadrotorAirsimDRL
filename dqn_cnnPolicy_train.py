@@ -58,20 +58,20 @@ model = DQN(
     tensorboard_log='./tb_logs/',
 )
 
-checkpoint_callback = CheckpointCallback(save_freq=500, save_path='./checkpoint/v16_dqn_cnnPolicy_4actions_imageObs_10000_steps/',
+checkpoint_callback = CheckpointCallback(save_freq=500, save_path='./checkpoint/v18_dqn_cnnPolicy_4actions_imageObs_100000_steps/',
                                          name_prefix='dqn_policy')
 
-time_steps = 10000
+time_steps = 100000
 model.learn(
     total_timesteps=int(time_steps),
     log_interval=5,
-    tb_log_name="v16_dqn_cnnPolicy_4actions_imageObs_10000_steps",
+    tb_log_name="v18_dqn_cnnPolicy_4actions_imageObs_100000_steps",
     callback=checkpoint_callback,
 )
 
 # Save policy weights
 # model.save("model/dqn_airsim_drone_policy")
-model.save("model/v16_dqn_cnnPolicy_4actions_imageObs_10000_steps")
+model.save("model/v18_dqn_cnnPolicy_4actions_imageObs_100000_steps")
 
 
 # time_steps = 100

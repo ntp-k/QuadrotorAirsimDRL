@@ -11,6 +11,9 @@ import random
 from PIL import Image
 from argparse import ArgumentParser
 
+import torch as th
+from torch import nn
+
 
 class AirSimDroneEnv(AirSimEnv):
 
@@ -19,7 +22,6 @@ class AirSimDroneEnv(AirSimEnv):
         self.step_length = step_length
         self.image_shape = image_shape
         self.destination = destination
-        # self.middle_pixel = 0
         self.total_rewards = float(0.0)
         self.distance = 300.0
         self.pass1 = False
@@ -35,7 +37,6 @@ class AirSimDroneEnv(AirSimEnv):
         self.MAX_LEFT = -60
         self.MAX_RIGHT = 60
 
-        # self.action_space = spaces.Discrete(6)    
         self.action_space = spaces.Discrete(4)
 
         # self.observation_space = spaces.Dict({ 'depth_cam': spaces.Box(low=0, high=255, shape=(84, 84, 1)),
@@ -68,25 +69,6 @@ class AirSimDroneEnv(AirSimEnv):
         self.drone.moveToPositionAsync(0, 0, -30, 5).join()
         self.drone.moveByVelocityAsync(1, 0, 0, 5).join()
 
-
-    # def _setup_destination(self):
-    #     #random area a,b,c (ratio 1:2:3)
-    #     area = random.randrange(1,7) # a -> 1 | b -> 2,3 | c -> 4,5,6
-    #     if area < 2: # a
-    #         x = random.randrange(230,271)
-    #         y = random.randrange(45,71)
-    #         print("\nDestination A ", [x,y,self.AVERAGE_ALTITUDE])
-    #     elif area < 4: # b
-    #         x = random.randrange(290,351)
-    #         y = random.randrange(-75,-44)
-    #         print("\nDestination B ", [x,y,self.AVERAGE_ALTITUDE])
-    #     else: # c
-    #         x = random.randrange(450,516)
-    #         y = random.randrange(-75,56)
-    #         print("\nDestination C ", [x,y,self.AVERAGE_ALTITUDE])
-
-
-    #     return np.array([x,y,self.AVERAGE_ALTITUDE])
 
 
     def transform_obs(self, responses):
@@ -122,7 +104,6 @@ class AirSimDroneEnv(AirSimEnv):
         self.drone.moveByVelocityAsync(
             quad_vel.x_val + quad_offset[0],
             quad_vel.y_val + quad_offset[1],
-            # quad_vel.z_val + quad_offset[2],
             0,
             4,
         ).join()
@@ -158,48 +139,22 @@ class AirSimDroneEnv(AirSimEnv):
         obs = self._get_obs()
         reward, done = self._compute_reward(action)
 
-        # if done:
-
-        #     self.total_rewards = 0
-            
-
         if action == 0:
-            movement = 'fore'
+            movement = 'foreward'
         elif action == 1:
-            movement = 'back'
+            movement = 'backward'
         elif action == 2:
             movement = 'right'
         else:
             movement = 'left'
 
 
-        # print("reward ", format(reward, ".2f"),  "\t  done  " + str(done), "\t action ", movement, "\t    velocity [", format(self.state["velocity"].x_val, ".1f"), ",\t",  format(self.state["velocity"].y_val, ".1f"), ",\t" , format(self.state["velocity"].z_val, ".1f"), "]")
-        # print("reward ", format(reward, ".2f"),  "\t  done  " + str(done), "\t action ", movement, "\t    position [", format(self.state["position"].x_val, ".1f"), ",\t",  format(self.state["position"].y_val, ".1f"), ",\t" , format(self.state["position"].z_val, ".1f"), "]")
-        print("reward ", format(reward, ".0f"),  "\t  done  " + str(done), "\t action ", movement)
+        print("reward ", format(reward, ".0f"),  "\t action ", movement)
         if done:
             self.pass1 = False
             self.pass2 = False
             self.pass3 = False
             print('Done!\n')
-
-        # if done:
-        #     self.total_rewards = 0
-        #     if self.done_flag == 0:
-        #         print("done : collision")
-        #     elif self.done_flag == 1:
-        #         print("done : out of range")
-        #         print("destination : ", self.destination, "\tposition : [", format(self.state["position"].x_val, ".1f"), ",",  format(self.state["position"].y_val, ".1f"), "," , format(self.state["position"].z_val, ".1f"), "]" )
-        #     elif self.done_flag == 2:
-        #         print("done : reach destination")
-        #     else:
-        #         print("done : total rewards < -100")
-        #     self.done_flag = -1
-
-        # if done:
-        #     if self.state["collision"]:
-        #         print('collision\n')
-        #     else:
-        #         print("out of range -> position : [", format(self.state["position"].x_val, ".1f"), ",",  format(self.state["position"].y_val, ".1f"), "," , format(self.state["position"].z_val, ".1f"), "]\n"  )
 
         return obs, reward, done, self.state
 
@@ -213,27 +168,6 @@ class AirSimDroneEnv(AirSimEnv):
 
 
     def interpret_action(self, action):
-        #NED coordinate system (X,Y,Z) : +X is North, +Y is East and +Z is Down
-        # if action == 0: # forward
-        #     quad_offset = (self.step_length, 0, 0)
-        #     self.movement = 'fore'
-        # elif action == 1: # slide right
-        #     quad_offset = (0, self.step_length, 0)
-        #     self.movement = 'right'
-        # elif action == 2: # downward
-        #     quad_offset = (0, 0, self.step_length)
-        #     self.movement = 'down'
-        # elif action == 3: # backward
-        #     quad_offset = (-self.step_length, 0, 0)
-        #     self.movement = 'back'
-        # elif action == 4: # slide left
-        #     quad_offset = (0, -self.step_length, 0)
-        #     self.movement = 'left'
-        # elif action == 5: # upward
-        #     quad_offset = (0, 0, -self.step_length)
-        #     self.movement = 'up'
-
-
         if action == 0: # forward
             quad_offset = (self.step_length, 0, 0)
         elif action == 1: # back
@@ -244,3 +178,4 @@ class AirSimDroneEnv(AirSimEnv):
             quad_offset = (0, -self.step_length, 0)
 
         return quad_offset
+

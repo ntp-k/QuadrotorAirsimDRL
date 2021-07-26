@@ -304,6 +304,9 @@ def _compute_reward(self, action):
 '''v15_dqn_cnnPolicy_4actions_imageObs_10000_steps
 '''
 
+
+
+
 '''v16_dqn_cnnPolicy_4actions_imageObs_10000_steps
 
 proceed forward + collision avoidance
@@ -347,3 +350,40 @@ def _compute_reward(self, action):
         self.pass1 = True
 
     return rewards, done
+
+
+'''v17_dqn_cnnPolicy_4actions_imageObs_10000_steps
+proceed forward + collision avoidance
+
+change : none
+
+train
+policy : cnn
+timestep : 10000
+
+env
+obs : image, ( 0-255 ; any value exceed 255 will be rounded down to 255)
+action : 4
+
+map
+goal : 200 meters
+obstacle :  random, every 50 meters (block rate 70%)
+'''
+
+'''v18_dqn_cnnPolicy_4actions_imageObs_100000_steps
+proceed forward + collision avoidance
+
+change : train timesteps
+
+train
+policy : cnn
+timestep : 100000
+
+env
+obs : image, ( 0-255 ; any value exceed 255 will be rounded down to 255)
+action : 4
+
+map
+goal : 200 meters
+obstacle :  random, every 50 meters (block rate 70%)
+'''
